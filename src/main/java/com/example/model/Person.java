@@ -3,7 +3,7 @@ package com.example.model;
 public class Person {
 	//Test comment added
 	// add comment 2
-	// test adding email notifudicdation
+	// test adding email notifdicdation
 	String id;
 	String firstName;
 	String lastName;
