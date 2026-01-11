@@ -4,7 +4,6 @@ public class Person {
 	//Test comment added
 	// add comment 22
 	// test adding email notifidahtion
-	// test adding email notifidahtion
 	String id;
 	String firstName;
 	String lastName;
