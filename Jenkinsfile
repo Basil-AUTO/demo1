@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    tools {
+        maven 'maven3.9.12' 
+        // If you also configured a specific JDK installation, add it here:
+        jdk 'openJDK17' 
+    }
+
     environment {
         // Configuration for your Docker Hub image
         // Make sure 'nexfiit' is your actual Docker Hub username
