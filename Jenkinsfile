@@ -9,8 +9,7 @@ pipeline {
     environment {
         // Define the image name
         IMAGE_NAME = 'nexfiit/demo1'
-        // Define the credential ID (this binds the credential object)
-        DOCKER_HUB_CREDS = credentials('docker-hub-cred') 
+        // We will handle credentials inside the stage using 'withCredentials'
     }
 
     stages {
@@ -35,14 +34,14 @@ pipeline {
 
         stage('Docker Login & Push') {
             steps {
-                // The variables DOCKER_HUB_CREDS_USR and DOCKER_HUB_CREDS_PSW 
-                // are automatically injected here by Jenkins.
-                script {
-                    sh "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
+                // Use withCredentials to bind the specific username and password variables
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-cred-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
+                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                        docker push ${IMAGE_NAME}:latest
+                    """
                 }
-                
-                sh "docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
-                sh "docker push ${IMAGE_NAME}:latest"
             }
         }
     }
@@ -50,8 +49,9 @@ pipeline {
     post {
         always {
             sh 'docker logout'
-            // Optional: Clean up images
+            // Optional: Clean up images to save disk space
             // sh "docker rmi ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest || true"
         }
     }
 }
+
