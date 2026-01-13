@@ -1,41 +1,63 @@
 pipeline {
     agent any
+
     environment {
-        // Replace with your Docker Hub username and repository name
-        DOCKER_IMAGE = 'your-username/maven-app'
-        REGISTRY_CREDS = 'docker-hub-creds' 
+        // Configuration for your Docker Hub image
+        // Make sure 'nexfiit' is your actual Docker Hub username
+        IMAGE_NAME = 'nexfiit/demo1'
+        // REPLACE 'docker-hub-cred-id' with your actual Jenkins Credential ID
+        DOCKER_HUB_CREDS = credentials('docker-hub-cred') 
     }
+
     stages {
-        stage('Build Artifact') {
+        stage('Checkout') {
             steps {
-                // Compile and package the Java application into a JAR
-                sh 'mvn clean package -DskipTests' 
+                echo 'Checking out code...'
+                checkout scm
             }
         }
-        stage('Build Docker Image') {
+
+        stage('Build & Test') {
             steps {
-                script {
-                    // Builds the image using the local Dockerfile
-                    appImage = docker.build("${DOCKER_IMAGE}:${env.BUILD_ID}")
-                }
+                echo 'Building Maven project...'
+                sh 'mvn clean install'
             }
         }
-        stage('Push to Registry') {
+
+        stage('Docker Build') {
             steps {
-                script {
-                    // Authenticates and pushes the image
-                    docker.withRegistry('', REGISTRY_CREDS) {
-                        appImage.push()
-                        appImage.push('latest')
-                    }
-                }
+                echo 'Building Docker Image...'
+                // Tag with Jenkins Build Number and 'latest'
+                sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
+                sh "docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest"
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                echo 'Logging into Docker Hub...'
+                // Login using the credentials bound in the environment block
+                sh "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                echo 'Pushing Image to Docker Hub...'
+                sh "docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
+                sh "docker push ${IMAGE_NAME}:latest"
             }
         }
     }
+
     post {
         always {
-            // Optional: Clean up local images to save disk space
-            sh "docker rmi ${DOCKER_IMAGE}:${env.BUILD_ID} || true"
+            echo 'Cleaning up...'
+            // Logout from Docker Hub
+            sh 'docker logout'
+            // Optional: Clean up local images to save space
+            // sh "docker rmi ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest || true"
         }
     }
 }
+
